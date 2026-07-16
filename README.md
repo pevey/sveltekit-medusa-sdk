@@ -1,3 +1,5 @@
+# NOTE: This client library is for Medusa v1.  A new SvelteKit SDK built for Medusa v2 is [in development](https://www.npmjs.com/package/sveltekit-medusa-sdk).  
+
 # sveltekit-medusa-client
 
 A client library for communicating with a Medusa ecommerce backend in SvelteKit
