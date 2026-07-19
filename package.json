@@ -16,7 +16,7 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/pevey/medusa-plugins.git"
+		"url": "git+https://github.com/pevey/sveltekit-medusa-sdk.git"
 	},
 	"homepage": "https://pevey.com/sveltekit-medusa-sdk",
 	"type": "module",
