@@ -1,9 +1,5 @@
-.svelte-kit
-node_modules
 src
-.DS_Store
-jsconfig.json
-package-lock.json
-yarn.lock
+.svelte-kit
 svelte.config.js
-vite.config.js
+vite.config.ts
+tsconfig.json
