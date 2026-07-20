@@ -1,4 +1,4 @@
-import * as cookie from 'cookie'
+import { parseSetCookie } from 'cookie'
 
 export interface ParsedSession {
 	value: string
@@ -15,16 +15,14 @@ export function parseSetCookieSession(
 	now: number
 ): ParsedSession | null {
 	for (const raw of setCookieHeaders) {
-		const parsed = cookie.parse(raw)
-		const value = parsed[backendSessionCookie]
-		if (value) {
-			const result: ParsedSession = { value }
-			if (parsed['Expires']) {
-				const expires = new Date(parsed['Expires']).getTime()
-				if (!Number.isNaN(expires)) result.maxAge = Math.floor((expires - now) / 1000)
-			}
-			return result
+		const parsed = parseSetCookie(raw)
+		if (parsed.name !== backendSessionCookie || !parsed.value) continue
+		const result: ParsedSession = { value: parsed.value }
+		if (parsed.expires) {
+			const maxAge = Math.floor((parsed.expires.getTime() - now) / 1000)
+			if (!Number.isNaN(maxAge)) result.maxAge = maxAge
 		}
+		return result
 	}
 	return null
 }
