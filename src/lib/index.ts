@@ -20,7 +20,7 @@
 // compiles them to client stubs, so the `$app/server` dependency never reaches
 // the browser. Only non-remote, barrel-reachable modules must avoid lib/server.
 // ─────────────────────────────────────────────────────────────────────────────
-export type { MedusaHandleConfig, MedusaContext, CookieNames, AuthResult } from './types'
+export type { MedusaHandleConfig, MedusaContext, CookieNames, AuthResult, Country } from './types'
 export { braintreeCheckoutSchema } from './schemas/braintree'
 
 // Reusable client-safe helpers (see lib/helpers)
@@ -28,6 +28,7 @@ export { formatBraintreeAddress } from './helpers/braintree'
 
 // Regions
 export { getRegions } from './regions.remote'
+export { regionForCountry, countriesFromRegions } from './helpers/regions'
 
 // Catalog (prerender defaults + query twins)
 export { getProducts, getProduct, getProductsQuery, getProductQuery } from './products.remote'

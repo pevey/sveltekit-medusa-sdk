@@ -67,3 +67,6 @@ export interface AuthResult {
 	ok: boolean
 	code?: string
 }
+
+/** A shippable country derived from the store's regions: iso_2 code + display name. */
+export type Country = { code: string; name: string }
