@@ -3,21 +3,28 @@ import * as v from 'valibot'
 import type Medusa from 'medusa-js-sdk'
 import { getClient, getConfig } from './internal/state'
 import { getDefaultRegionId } from './internal/region'
+import { mergeFields } from './internal/merge-fields'
 import { requestContext } from './server/request'
+
+// Baseline `fields` the product remotes always request so prices come back by default.
+// Consumers extend/override via the `fields` arg (Medusa select syntax) — see mergeFields.
+const PRODUCT_FIELDS = ['*variants.calculated_price']
 
 const regionSchema = v.object({
   region_id: v.optional(v.string()),
-  country_code: v.optional(v.string())
+  country_code: v.optional(v.string()),
+  fields: v.optional(v.string())
 })
 
 const productArgsSchema = v.object({
   id: v.optional(v.string()),
   slug: v.optional(v.string()),
   region_id: v.optional(v.string()),
-  country_code: v.optional(v.string())
+  country_code: v.optional(v.string()),
+  fields: v.optional(v.string())
 })
 
-type RegionArgs = { region_id?: string; country_code?: string }
+type RegionArgs = { region_id?: string; country_code?: string; fields?: string }
 type ProductArgs = RegionArgs & { id?: string; slug?: string }
 
 /**
@@ -44,13 +51,14 @@ function regionParams(a: RegionArgs): Record<string, string> {
 }
 
 async function listProductsCore(client: Medusa, a: RegionArgs, headers?: Record<string, string>) {
-  const { products } = await client.store.product.list(regionParams(a), headers)
+  const params = { ...regionParams(a), fields: mergeFields(PRODUCT_FIELDS, a.fields) }
+  const { products } = await client.store.product.list(params, headers)
   return products
 }
 
 async function getProductCore(client: Medusa, a: ProductArgs, headers?: Record<string, string>) {
   if (!a.id && !a.slug) return null
-  const params = { ...regionParams(a), fields: '*variants.calculated_price' }
+  const params = { ...regionParams(a), fields: mergeFields(PRODUCT_FIELDS, a.fields) }
   if (a.id) {
     const { product } = await client.store.product.retrieve(a.id, params, headers)
     return product
@@ -78,7 +86,7 @@ export const getProduct = prerender(
 export const getProductsQuery = query(v.optional(regionSchema, {}), async (a: RegionArgs) => {
   const ctx = requestContext()
   const region_id = a.region_id || ctx.region_id || (await getDefaultRegionId())
-  return listProductsCore(ctx.client, { region_id, country_code: a.country_code || ctx.country_code }, ctx.headers())
+  return listProductsCore(ctx.client, { region_id, country_code: a.country_code || ctx.country_code, fields: a.fields }, ctx.headers())
 })
 
 export const getProductQuery = query(productArgsSchema, async (a: ProductArgs) => {

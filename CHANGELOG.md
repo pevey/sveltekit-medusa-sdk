@@ -1,3 +1,7 @@
+## 0.8.1
+
+- Add support for adding and omitting fields on getProduct, getProductQuery, getProducts, and getProductsQuery via a new 'fields' prop on the argument.
+
 ## 0.8.0
 
 - Bump underlying Medusa sdk version
