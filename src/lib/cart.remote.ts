@@ -28,6 +28,26 @@ function currentCartId(): string | undefined {
   return getRequestEvent().cookies.get(cartCookieName())
 }
 
+// A stale/foreign cart id (deleted, expired, or left over from a different backend) makes the
+// store cart endpoints throw a 404.
+function isCartNotFound(e: unknown): boolean {
+  return (e as { status?: number } | null)?.status === 404
+}
+
+// Reads treat a 404 as "no cart" and return null, so `getCart` renders an empty cart instead of
+// 500-ing the whole page. A `query` may NOT mutate cookies, so the stale cookie is left in place
+// here; it is healed on the next mutation (a `command` — see `addToCart`, which can set cookies).
+// A real backend error (network, 5xx) is rethrown so it still surfaces.
+async function retrieveCart(ctx: MedusaContext, cartId: string) {
+  try {
+    const { cart } = await ctx.client.store.cart.retrieve(cartId, cartRelations, ctx.headers())
+    return cart ?? null
+  } catch (e) {
+    if (isCartNotFound(e)) return null
+    throw e
+  }
+}
+
 const addressSchema = v.object({
   first_name: v.optional(v.string()),
   last_name: v.optional(v.string()),
@@ -45,16 +65,15 @@ export const getCart = query(async () => {
   const ctx = requestContext()
   const cartId = currentCartId()
   if (!cartId) return null
-  const { cart } = await ctx.client.store.cart.retrieve(cartId, cartRelations, ctx.headers())
-  return cart
+  return retrieveCart(ctx, cartId)
 })
 
 export const getCartById = query(v.optional(v.string()), async (cartId?: string) => {
   if (!cartId) return null
   const ctx = requestContext()
-  const { cart } = await ctx.client.store.cart.retrieve(cartId, cartRelations, ctx.headers())
+  const cart = await retrieveCart(ctx, cartId)
   if (cart) setCartCookie(cart.id)
-  return cart ?? null
+  return cart
 })
 
 async function createCartBody(ctx: MedusaContext): Promise<Record<string, string>> {
@@ -74,15 +93,19 @@ export const createCart = command(async () => {
   return result
 })
 
-async function ensureCartId(ctx: MedusaContext): Promise<string> {
-  const existing = currentCartId()
-  if (existing) return existing
+// Create a new cart, set the cookie, and apply any pending affiliate code. Setting the cookie is
+// allowed here because every caller is a `command`.
+async function createFreshCart(ctx: MedusaContext): Promise<string> {
   const { cart } = await ctx.client.store.cart.create(await createCartBody(ctx), cartRelations, ctx.headers())
   setCartCookie(cart.id)
   // Apply a pending affiliate code captured before the cart existed.
   const code = pendingAffiliateCode()
   if (code) await applyAffiliateToCart(ctx, cart.id, code)
   return cart.id
+}
+
+async function ensureCartId(ctx: MedusaContext): Promise<string> {
+  return currentCartId() ?? (await createFreshCart(ctx))
 }
 
 export const addToCart = command(
@@ -93,9 +116,19 @@ export const addToCart = command(
   async ({ variant_id, quantity }) => {
     const ctx = requestContext()
     const cartId = await ensureCartId(ctx)
-    const { cart } = await ctx.client.store.cart.createLineItem(cartId, { variant_id, quantity }, cartRelations, ctx.headers())
-    getCart().set(cart)
-    return cart
+    try {
+      const { cart } = await ctx.client.store.cart.createLineItem(cartId, { variant_id, quantity }, cartRelations, ctx.headers())
+      getCart().set(cart)
+      return cart
+    } catch (e) {
+      if (!isCartNotFound(e)) throw e
+      // The cookie's cart id was stale (e.g. left over from another backend): the `create` in
+      // `ensureCartId` was skipped because a cookie existed. Start a fresh cart and retry once.
+      const freshId = await createFreshCart(ctx)
+      const { cart } = await ctx.client.store.cart.createLineItem(freshId, { variant_id, quantity }, cartRelations, ctx.headers())
+      getCart().set(cart)
+      return cart
+    }
   }
 )
 
