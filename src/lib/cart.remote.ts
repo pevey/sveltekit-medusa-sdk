@@ -1,4 +1,5 @@
 import { query, command, getRequestEvent } from '$app/server'
+import { error } from '@sveltejs/kit'
 import * as v from 'valibot'
 import { requestContext } from './server/request'
 import { getConfig } from './internal/state'
@@ -108,6 +109,21 @@ async function ensureCartId(ctx: MedusaContext): Promise<string> {
   return currentCartId() ?? (await createFreshCart(ctx))
 }
 
+async function addLine(ctx: MedusaContext, cartId: string, variant_id: string, quantity: number) {
+  const { cart } = await ctx.client.store.cart.createLineItem(cartId, { variant_id, quantity }, cartRelations, ctx.headers())
+  getCart().set(cart)
+  return cart
+}
+
+// SvelteKit sanitizes a raw thrown error to a generic "Internal Error" on the client. Re-throw
+// the backend's status + message as an `error()` (HttpError), which IS passed through — so a
+// consumer's `onerror` (e.g. an add-to-cart button) can show or map a real message instead.
+function throwCartError(e: unknown): never {
+  const err = e as { status?: number; message?: string } | null
+  const status = typeof err?.status === 'number' && err.status >= 400 && err.status < 600 ? err.status : 400
+  throw error(status, err?.message || 'Could not update the cart.')
+}
+
 export const addToCart = command(
   v.object({
     variant_id: v.pipe(v.string(), v.nonEmpty()),
@@ -117,17 +133,18 @@ export const addToCart = command(
     const ctx = requestContext()
     const cartId = await ensureCartId(ctx)
     try {
-      const { cart } = await ctx.client.store.cart.createLineItem(cartId, { variant_id, quantity }, cartRelations, ctx.headers())
-      getCart().set(cart)
-      return cart
+      return await addLine(ctx, cartId, variant_id, quantity)
     } catch (e) {
-      if (!isCartNotFound(e)) throw e
-      // The cookie's cart id was stale (e.g. left over from another backend): the `create` in
-      // `ensureCartId` was skipped because a cookie existed. Start a fresh cart and retry once.
-      const freshId = await createFreshCart(ctx)
-      const { cart } = await ctx.client.store.cart.createLineItem(freshId, { variant_id, quantity }, cartRelations, ctx.headers())
-      getCart().set(cart)
-      return cart
+      // Stale cart id (e.g. a cookie left over from another backend): `ensureCartId` reused it
+      // because a cookie existed. Start a fresh cart and retry once; surface anything else.
+      if (isCartNotFound(e)) {
+        try {
+          return await addLine(ctx, await createFreshCart(ctx), variant_id, quantity)
+        } catch (retryErr) {
+          throwCartError(retryErr)
+        }
+      }
+      throwCartError(e)
     }
   }
 )

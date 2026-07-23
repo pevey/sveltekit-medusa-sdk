@@ -6,9 +6,29 @@ import { getDefaultRegionId } from './internal/region'
 import { mergeFields } from './internal/merge-fields'
 import { requestContext } from './server/request'
 
-// Baseline `fields` the product remotes always request so prices come back by default.
-// Consumers extend/override via the `fields` arg (Medusa select syntax) — see mergeFields.
+// Baseline `fields` the product remotes request so prices come back by default. Consumers
+// extend/override via the `fields` arg (Medusa select syntax) — see mergeFields.
 const PRODUCT_FIELDS = ['*variants.calculated_price']
+
+// `calculated_price` requires a pricing region. When none is resolvable (a multi-region
+// backend with no configured `defaultRegionId` and no region cookie), requesting the price
+// field 500s the whole query — so we omit it (products come back without prices) and warn
+// once in dev. Set `defaultRegionId` in createMedusaHandle, use a single-region backend, or
+// set a region cookie to get prices back. Product.Price renders nothing when the price is absent.
+let warnedNoRegionPricing = false
+function productFields(a: RegionArgs): string {
+  if (a.region_id) return mergeFields(PRODUCT_FIELDS, a.fields)
+  // Warn once per server process — surfaces a real misconfig instead of silently dropping prices.
+  if (!warnedNoRegionPricing) {
+    warnedNoRegionPricing = true
+    console.warn(
+      '[sveltekit-medusa-sdk] No pricing region resolved — returning products without prices ' +
+        '(calculated_price omitted). Set `defaultRegionId` in createMedusaHandle, use a ' +
+        'single-region backend, or set a region cookie to include prices.'
+    )
+  }
+  return mergeFields([], a.fields)
+}
 
 const regionSchema = v.object({
   region_id: v.optional(v.string()),
@@ -51,14 +71,18 @@ function regionParams(a: RegionArgs): Record<string, string> {
 }
 
 async function listProductsCore(client: Medusa, a: RegionArgs, headers?: Record<string, string>) {
-  const params = { ...regionParams(a), fields: mergeFields(PRODUCT_FIELDS, a.fields) }
+  const fields = productFields(a)
+  const params: Record<string, string> = { ...regionParams(a) }
+  if (fields) params.fields = fields
   const { products } = await client.store.product.list(params, headers)
   return products
 }
 
 async function getProductCore(client: Medusa, a: ProductArgs, headers?: Record<string, string>) {
   if (!a.id && !a.slug) return null
-  const params = { ...regionParams(a), fields: mergeFields(PRODUCT_FIELDS, a.fields) }
+  const fields = productFields(a)
+  const params: Record<string, string> = { ...regionParams(a) }
+  if (fields) params.fields = fields
   if (a.id) {
     const { product } = await client.store.product.retrieve(a.id, params, headers)
     return product
