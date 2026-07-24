@@ -1,5 +1,6 @@
 import { query, command, getRequestEvent } from '$app/server'
 import { error } from '@sveltejs/kit'
+import { dev } from '$app/env'
 import * as v from 'valibot'
 import { requestContext } from './server/request'
 import { getConfig } from './internal/state'
@@ -8,7 +9,9 @@ import { pendingAffiliateCode, applyAffiliateToCart } from './server/affiliate'
 import type { MedusaContext } from './types'
 
 // Always resolve `shipping_methods.name` on cart reads/mutations.
-const cartRelations = { fields: '+shipping_methods.name' }
+// `region.payment_providers.id` lets a checkout pick the payment UI from the cart's current region
+// (reactive with the cart) without a separate, cookie-scoped payment-providers fetch.
+const cartRelations = { fields: '+shipping_methods.name,+region.payment_providers.id' }
 const CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 400
 
 function cartCookieName() {
@@ -118,10 +121,33 @@ async function addLine(ctx: MedusaContext, cartId: string, variant_id: string, q
 // SvelteKit sanitizes a raw thrown error to a generic "Internal Error" on the client. Re-throw
 // the backend's status + message as an `error()` (HttpError), which IS passed through — so a
 // consumer's `onerror` (e.g. an add-to-cart button) can show or map a real message instead.
-function throwCartError(e: unknown): never {
+/**
+ * Convert a backend cart failure into a clean SvelteKit `error()` — an HttpError whose message IS
+ * passed through to the client (a raw throw would surface as a masked 500). Backend 5xx are downgraded
+ * to 409 so the storefront shows a graceful, handled error instead of a 500 page.
+ *
+ * PROD: a generic "something went wrong" message. DEV: the backend detail, plus — on a region change —
+ * a pointed hint, because a cart update that fails right after switching region is almost always a
+ * product missing a price for the new region's currency (Medusa 500s with a `calculated_amount`
+ * TypeError, and masks it in the response). This is the single most common new-store/new-product
+ * footgun; naming the exact product would need an extra request, so we point at the cause instead.
+ */
+function throwCartError(e: unknown, opts?: { regionChange?: boolean }): never {
   const err = e as { status?: number; message?: string } | null
-  const status = typeof err?.status === 'number' && err.status >= 400 && err.status < 600 ? err.status : 400
-  throw error(status, err?.message || 'Could not update the cart.')
+  const backend = typeof err?.status === 'number' && err.status >= 400 && err.status < 600 ? err.status : 500
+  const status = backend >= 500 ? 409 : backend
+
+  if (!dev) throw error(status, 'Something went wrong updating your cart. Please try again.')
+
+  let message = err?.message || 'Could not update the cart.'
+  if (opts?.regionChange) {
+    message =
+      `Cart update failed after a region change — this is almost always because a product in the cart ` +
+      `has no price set for the new region's currency. Add prices for that region to each product in the ` +
+      `cart. (backend: ${err?.message ?? 'unknown error'})`
+    console.warn('[sveltekit-medusa-sdk]', message)
+  }
+  throw error(status, message)
 }
 
 export const addToCart = command(
@@ -187,9 +213,13 @@ export const updateCart = command(
     const ctx = requestContext()
     const cartId = currentCartId()
     if (!cartId) return null
-    const { cart } = await ctx.client.store.cart.update(cartId, data, cartRelations, ctx.headers())
-    getCart().set(cart)
-    return cart
+    try {
+      const { cart } = await ctx.client.store.cart.update(cartId, data, cartRelations, ctx.headers())
+      getCart().set(cart)
+      return cart
+    } catch (e) {
+      throwCartError(e, { regionChange: !!data.region_id })
+    }
   }
 )
 
