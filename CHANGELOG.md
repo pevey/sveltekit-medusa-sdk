@@ -1,3 +1,7 @@
+## 2.18.0
+
+- Bump js-sdk dependency to 2.18.0. Change versioning to mirror medusa-js-sdk, which mirrors medusa version the sdk supports.
+
 ## 0.8.1
 
 - Add support for adding and omitting fields on getProduct, getProductQuery, getProducts, and getProductsQuery via a new 'fields' prop on the argument.
