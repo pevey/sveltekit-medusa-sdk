@@ -1,6 +1,7 @@
 ## 2.18.0
 
 - Bump js-sdk dependency to 2.18.0. Change versioning to mirror medusa-js-sdk, which mirrors medusa version the sdk supports.
+- Expand default cart fields to enable auto-detection of support payment provider at checkout
 
 ## 0.8.1
 
