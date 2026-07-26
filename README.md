@@ -36,7 +36,7 @@ const config = {
 export default config
 ```
 
-- Vite configured to treat the package as internal to your app so that $app/server can resolve (ssr: noExternal). Also, prevent remote functions being dropped by the bundler in dev mode by excluding from optimizeDeps.
+- Vite configured to treat the package as internal to your app so that $app/server can resolve (ssr: noExternal). Also, for SvelteKit <= 3.0.0-next.10, prevent remote functions being dropped by the bundler in dev mode by excluding from optimizeDeps.
 
 ```js
 // vite.config.js
