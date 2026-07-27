@@ -11,15 +11,21 @@ export const getReviews = query(
 	v.object({
 		productId: v.pipe(v.string(), v.nonEmpty()),
 		limit: v.optional(v.number()),
-		offset: v.optional(v.number())
+		offset: v.optional(v.number()),
+		order: v.optional(v.string()),
+		featured: v.optional(v.boolean()),
+		rating: v.optional(v.pipe(v.number(), v.minValue(1), v.maxValue(5)))
 	}),
-	async ({ productId, limit, offset }) => {
+	async ({ productId, limit, offset, order, featured, rating }) => {
 		const ctx = requestContext()
 		return ctx.client.store.review.list(
 			productId,
 			{
 				...(limit !== undefined ? { limit } : {}),
-				...(offset !== undefined ? { offset } : {})
+				...(offset !== undefined ? { offset } : {}),
+				...(order !== undefined ? { order } : {}),
+				...(featured !== undefined ? { featured } : {}),
+				...(rating !== undefined ? { rating } : {})
 			},
 			ctx.headers()
 		)
@@ -44,5 +50,14 @@ export const createReview = command(
 	async ({ productId, ...input }) => {
 		const ctx = requestContext()
 		return ctx.client.store.review.create(productId, input, ctx.headers())
+	}
+)
+
+/** Aggregate rating summary (average, count, per-star distribution) for a product. */
+export const getReviewSummary = query(
+	v.object({ productId: v.pipe(v.string(), v.nonEmpty()) }),
+	async ({ productId }) => {
+		const ctx = requestContext()
+		return ctx.client.store.review.summary(productId, ctx.headers())
 	}
 )
