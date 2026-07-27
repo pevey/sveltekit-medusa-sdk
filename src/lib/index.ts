@@ -79,7 +79,7 @@ export { getAddresses, saveAddress, deleteAddress } from './address.remote'
 // Generic primitives
 export { search } from './search.remote'
 export { submitForm } from './forms.remote'
-export { getReviews, getReviewSummary, createReview } from './reviews.remote'
+export { getReviews, getReviewSummary, createReview, reviewForm } from './reviews.remote'
 export {
 	getContentCollections,
 	getContentCollection,

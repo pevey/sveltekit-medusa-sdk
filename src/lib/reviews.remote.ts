@@ -1,6 +1,11 @@
-import { query, command } from '$app/server'
+import { query, command, form, getRequestEvent } from '$app/server'
 import * as v from 'valibot'
 import { requestContext } from './server/request'
+import { getConfig } from './internal/state'
+
+function isAuthenticated(): boolean {
+	return !!getRequestEvent().cookies.get(getConfig().cookies.session)
+}
 
 /**
  * List approved reviews for a product (requires the reviews plugin on the
@@ -59,5 +64,37 @@ export const getReviewSummary = query(
 	async ({ productId }) => {
 		const ctx = requestContext()
 		return ctx.client.store.review.summary(productId, ctx.headers())
+	}
+)
+
+/**
+ * Submit a review via a native form (progressive-enhancement). Requires a signed-in
+ * customer; the session replayed via `ctx.headers()` supplies `customer_id`. Form fields
+ * arrive as strings, hence the `rating` string→number coercion.
+ */
+export const reviewForm = form(
+	v.object({
+		productId: v.pipe(v.string(), v.nonEmpty()),
+		author_name: v.pipe(v.string(), v.nonEmpty('Please enter your name.')),
+		rating: v.pipe(
+			v.string(),
+			v.transform(Number),
+			v.number(),
+			v.minValue(1, 'Please choose a rating.'),
+			v.maxValue(5)
+		),
+		title: v.optional(v.string()),
+		body: v.pipe(v.string(), v.nonEmpty('Please write your review.'))
+	}),
+	async ({ productId, ...input }) => {
+		if (!isAuthenticated()) return { ok: false as const, code: 'unauthenticated' as const }
+		const ctx = requestContext()
+		try {
+			const { review } = await ctx.client.store.review.create(productId, input, ctx.headers())
+			return { ok: true as const, review }
+		} catch (e: any) {
+			if (e?.status === 401) return { ok: false as const, code: 'unauthenticated' as const }
+			return { ok: false as const, code: 'error' as const }
+		}
 	}
 )
