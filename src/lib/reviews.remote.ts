@@ -58,6 +58,44 @@ export const createReview = command(
 	}
 )
 
+/**
+ * Edit the signed-in customer's own review. The session replayed via `ctx.headers()`
+ * supplies `customer_id`; the backend rejects a non-owner with 403 and resets the
+ * review to its default (typically pending) status for re-moderation. Callers should
+ * refresh the list afterwards, e.g. `await getReviews({ productId }).refresh()`.
+ */
+export const updateReview = command(
+	v.object({
+		productId: v.pipe(v.string(), v.nonEmpty()),
+		reviewId: v.pipe(v.string(), v.nonEmpty()),
+		rating: v.pipe(v.number(), v.minValue(1), v.maxValue(5)),
+		title: v.optional(v.string()),
+		body: v.pipe(v.string(), v.nonEmpty()),
+		author_name: v.pipe(v.string(), v.nonEmpty()),
+		order_id: v.optional(v.string())
+	}),
+	async ({ productId, reviewId, ...input }) => {
+		const ctx = requestContext()
+		return ctx.client.store.review.update(productId, reviewId, input, ctx.headers())
+	}
+)
+
+/**
+ * Delete the signed-in customer's own review. The session replayed via `ctx.headers()`
+ * supplies `customer_id`; the backend rejects a non-owner with 403. Callers should
+ * refresh the list afterwards, e.g. `await getReviews({ productId }).refresh()`.
+ */
+export const deleteReview = command(
+	v.object({
+		productId: v.pipe(v.string(), v.nonEmpty()),
+		reviewId: v.pipe(v.string(), v.nonEmpty())
+	}),
+	async ({ productId, reviewId }) => {
+		const ctx = requestContext()
+		return ctx.client.store.review.delete(productId, reviewId, ctx.headers())
+	}
+)
+
 /** Aggregate rating summary (average, count, per-star distribution) for a product. */
 export const getReviewSummary = query(
 	v.object({ productId: v.pipe(v.string(), v.nonEmpty()) }),
