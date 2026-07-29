@@ -81,6 +81,7 @@ export { search } from './search.remote'
 export { submitForm } from './forms.remote'
 export {
 	getReviews,
+	getMyReviews,
 	getReviewSummary,
 	createReview,
 	updateReview,

@@ -106,6 +106,34 @@ export const getReviewSummary = query(
 )
 
 /**
+ * List reviews created by the signed-in customer across all products.
+ * Requires authentication — unauthenticated requests return { reviews: [], count: 0 }.
+ * Shows all review statuses (pending, approved, rejected) for the owner.
+ */
+export const getMyReviews = query(
+	v.object({
+		limit: v.optional(v.number()),
+		offset: v.optional(v.number()),
+		order: v.optional(v.string()),
+		status: v.optional(v.picklist(['pending', 'approved', 'rejected']))
+	}),
+	async ({ limit, offset, order, status }) => {
+		if (!isAuthenticated()) return { reviews: [], count: 0 }
+
+		const ctx = requestContext()
+		return ctx.client.store.review.listMine(
+			{
+				...(limit !== undefined ? { limit } : {}),
+				...(offset !== undefined ? { offset } : {}),
+				...(order !== undefined ? { order } : {}),
+				...(status !== undefined ? { status } : {})
+			},
+			ctx.headers()
+		)
+	}
+)
+
+/**
  * Submit a review via a native form (progressive-enhancement). Requires a signed-in
  * customer; the session replayed via `ctx.headers()` supplies `customer_id`. Form fields
  * arrive as strings, hence the `rating` string→number coercion.
