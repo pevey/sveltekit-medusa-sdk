@@ -20,12 +20,7 @@ export function pendingAffiliateCode(): string | undefined {
  */
 export async function applyAffiliateToCart(ctx: MedusaContext, cartId: string, code: string) {
 	try {
-		const { cart } = await ctx.client.store.cart.addPromotions(
-			cartId,
-			{ promo_codes: [code] },
-			cartRelations,
-			ctx.headers()
-		)
+		const { cart } = await ctx.client.store.cart.addPromotions(cartId, { promo_codes: [code] }, cartRelations, ctx.headers())
 		return cart
 	} catch {
 		return null

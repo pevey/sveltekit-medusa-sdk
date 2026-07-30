@@ -12,12 +12,12 @@
  * @example mergeFields(['*variants.calculated_price'], '-variants.calculated_price')   → '-variants.calculated_price'
  */
 export function mergeFields(baseline: string[], fields?: string): string {
-  const consumer = (fields ?? '')
-    .split(',')
-    .map((t) => t.trim())
-    .filter(Boolean)
-  const bare = (t: string) => t.replace(/^[+\-*]/, '')
-  const consumerBare = new Set(consumer.map(bare))
-  const kept = baseline.filter((b) => !consumerBare.has(bare(b)))
-  return [...kept, ...consumer].join(',')
+	const consumer = (fields ?? '')
+		.split(',')
+		.map(t => t.trim())
+		.filter(Boolean)
+	const bare = (t: string) => t.replace(/^[+\-*]/, '')
+	const consumerBare = new Set(consumer.map(bare))
+	const kept = baseline.filter(b => !consumerBare.has(bare(b)))
+	return [...kept, ...consumer].join(',')
 }

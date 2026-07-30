@@ -32,18 +32,8 @@ export { regionForCountry, countriesFromRegions } from './helpers/regions'
 
 // Catalog (prerender defaults + query twins)
 export { getProducts, getProduct, getProductsQuery, getProductQuery } from './products.remote'
-export {
-	getProductCategories,
-	getProductCategory,
-	getProductCategoriesQuery,
-	getProductCategoryQuery
-} from './categories.remote'
-export {
-	getCollections,
-	getCollection,
-	getCollectionsQuery,
-	getCollectionQuery
-} from './collections.remote'
+export { getProductCategories, getProductCategory, getProductCategoriesQuery, getProductCategoryQuery } from './categories.remote'
+export { getCollections, getCollection, getCollectionsQuery, getCollectionQuery } from './collections.remote'
 
 // Cart
 export {
@@ -79,21 +69,8 @@ export { getAddresses, saveAddress, deleteAddress } from './address.remote'
 // Generic primitives
 export { search } from './search.remote'
 export { submitForm } from './forms.remote'
-export {
-	getReviews,
-	getMyReviews,
-	getReviewSummary,
-	createReview,
-	updateReview,
-	deleteReview,
-	reviewForm
-} from './reviews.remote'
-export {
-	getContentCollections,
-	getContentCollection,
-	getContentItems,
-	getContentItem
-} from './content.remote'
+export { getReviews, getMyReviews, getReviewSummary, createReview, updateReview, deleteReview, reviewForm } from './reviews.remote'
+export { getContentCollections, getContentCollection, getContentItems, getContentItem } from './content.remote'
 
 // Analytics — layout component + tracking API + the framework-agnostic collector.
 // (Server-side beacon forwarder lives at `sveltekit-medusa-sdk/server`.)

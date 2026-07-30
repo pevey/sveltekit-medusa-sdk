@@ -87,7 +87,7 @@ export async function forwardAnalytics(request: Request): Promise<Response> {
 	const actorId = cookies.get(cfg.cookies.anonymousId)
 	const cartId = cookies.get(cfg.cookies.cart)
 
-	const events: AnalyticsEvent[] = (Array.isArray(body) ? body : [body]).map((e) => ({
+	const events: AnalyticsEvent[] = (Array.isArray(body) ? body : [body]).map(e => ({
 		...e,
 		...(actorId ? { actor_id: actorId } : {}),
 		properties: {
@@ -112,8 +112,7 @@ export async function forwardAnalytics(request: Request): Promise<Response> {
 }
 
 /** Ready-made `+server.ts` POST handler; re-export as `POST`. */
-export const analyticsPOST = (event: RequestEvent): Promise<Response> =>
-	forwardAnalytics(event.request)
+export const analyticsPOST = (event: RequestEvent): Promise<Response> => forwardAnalytics(event.request)
 
 /**
  * Attach traits to the current anonymous visitor's identity, server-side. Use it
@@ -127,9 +126,7 @@ export async function setTraits(traits: Record<string, unknown>): Promise<void> 
 	const actorId = getRequestEvent().cookies.get(cfg.cookies.anonymousId)
 	if (!actorId) return
 	try {
-		await getClient().store.analytics.track([
-			{ event: '_identify', actor_id: actorId, properties: traits }
-		])
+		await getClient().store.analytics.track([{ event: '_identify', actor_id: actorId, properties: traits }])
 	} catch {
 		// Best-effort — trait capture must not break the request.
 	}
@@ -150,10 +147,7 @@ export async function stitchAnalyticsIdentity(sessionValue: string): Promise<voi
 
 	try {
 		const client = getClient()
-		const { customer } = await client.store.customer.retrieve(
-			{},
-			{ Cookie: `${cfg.backendSessionCookie}=${sessionValue}` }
-		)
+		const { customer } = await client.store.customer.retrieve({}, { Cookie: `${cfg.backendSessionCookie}=${sessionValue}` })
 		if (!customer?.id) return
 
 		await client.store.analytics.track([

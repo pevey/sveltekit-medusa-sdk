@@ -12,33 +12,30 @@ import { applyAffiliateToCart } from './server/affiliate'
  * NOT create a cart — a pending code is applied when the cart is first created
  * (see cart.remote's ensureCartId/createCart).
  */
-export const captureAffiliate = command(
-	v.object({ code: v.pipe(v.string(), v.nonEmpty()) }),
-	async ({ code }) => {
-		const { cookies } = getRequestEvent()
-		const cfg = getConfig()
-		const aff = cfg.affiliate
+export const captureAffiliate = command(v.object({ code: v.pipe(v.string(), v.nonEmpty()) }), async ({ code }) => {
+	const { cookies } = getRequestEvent()
+	const cfg = getConfig()
+	const aff = cfg.affiliate
 
-		const existing = cookies.get(aff.cookie)
-		const keepFirst = aff.basis === 'first-touch' && !!existing
-		const activeCode = keepFirst ? (existing as string) : code
+	const existing = cookies.get(aff.cookie)
+	const keepFirst = aff.basis === 'first-touch' && !!existing
+	const activeCode = keepFirst ? (existing as string) : code
 
-		if (!keepFirst) {
-			cookies.set(aff.cookie, code, {
-				path: '/',
-				maxAge: aff.maxAgeDays * 60 * 60 * 24,
-				sameSite: 'lax',
-				httpOnly: true,
-				secure: true
-			})
-		}
-
-		const cartId = cookies.get(cfg.cookies.cart)
-		if (cartId) {
-			const cart = await applyAffiliateToCart(requestContext(), cartId, activeCode)
-			if (cart) getCart().set(cart)
-		}
-
-		return { code: activeCode }
+	if (!keepFirst) {
+		cookies.set(aff.cookie, code, {
+			path: '/',
+			maxAge: aff.maxAgeDays * 60 * 60 * 24,
+			sameSite: 'lax',
+			httpOnly: true,
+			secure: true
+		})
 	}
-)
+
+	const cartId = cookies.get(cfg.cookies.cart)
+	if (cartId) {
+		const cart = await applyAffiliateToCart(requestContext(), cartId, activeCode)
+		if (cart) getCart().set(cart)
+	}
+
+	return { code: activeCode }
+})

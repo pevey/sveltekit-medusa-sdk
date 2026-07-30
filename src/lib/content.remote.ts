@@ -30,13 +30,10 @@ export const getContentCollections = query(
 )
 
 /** Retrieve a single content collection by slug. */
-export const getContentCollection = query(
-	v.object({ slug: v.pipe(v.string(), v.nonEmpty()) }),
-	async ({ slug }) => {
-		const ctx = requestContext()
-		return ctx.client.store.content.retrieve(slug, {}, ctx.headers())
-	}
-)
+export const getContentCollection = query(v.object({ slug: v.pipe(v.string(), v.nonEmpty()) }), async ({ slug }) => {
+	const ctx = requestContext()
+	return ctx.client.store.content.retrieve(slug, {}, ctx.headers())
+})
 
 /** List published items in a collection. */
 export const getContentItems = query(
@@ -71,11 +68,6 @@ export const getContentItem = query(
 	}),
 	async ({ slug, itemSlug, render }) => {
 		const ctx = requestContext()
-		return ctx.client.store.content.retrieveItem(
-			slug,
-			itemSlug,
-			{ ...(render ? { render } : {}) },
-			ctx.headers()
-		)
+		return ctx.client.store.content.retrieveItem(slug, itemSlug, { ...(render ? { render } : {}) }, ctx.headers())
 	}
 )

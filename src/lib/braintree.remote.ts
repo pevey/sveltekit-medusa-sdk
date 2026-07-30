@@ -56,12 +56,7 @@ export const braintreeCheckoutForm = form(braintreeCheckoutSchema, async data =>
 				phone: data.billing_phone
 			}
 
-	const { cart } = await ctx.client.store.cart.update(
-		cartId,
-		{ email: data.email, shipping_address, billing_address },
-		cartRelations,
-		ctx.headers()
-	)
+	const { cart } = await ctx.client.store.cart.update(cartId, { email: data.email, shipping_address, billing_address }, cartRelations, ctx.headers())
 	getCart().set(cart)
 	return { ok: true as const }
 })
@@ -91,44 +86,30 @@ export const initiateBraintreePaymentSession = command(
 		if (!cart) return null
 
 		if (data?.payment_method_nonce) {
-			const res = await fetch(
-				`${cfg.baseUrl}/store/payment-collections/${cart.payment_collection?.id}/payment-sessions`,
-				{
-					method: 'POST',
-					headers: backendHeaders(ctx.headers()),
-					body: JSON.stringify({
-						provider_id,
-						data: {
-							payment_method_nonce: data.payment_method_nonce,
-							context: {
-								customer: {
-									email: cart.email,
-									firstName:
-										cart.billing_address?.first_name ||
-										cart.shipping_address?.first_name ||
-										'',
-									lastName:
-										cart.billing_address?.last_name ||
-										cart.shipping_address?.last_name ||
-										'',
-									phone: cart.billing_address?.phone || cart.shipping_address?.phone || ''
-								},
-								shipping: formatBraintreeAddress('shipping', cart),
-								billing: formatBraintreeAddress('billing', cart),
-								deviceData: data.deviceData
-							}
+			const res = await fetch(`${cfg.baseUrl}/store/payment-collections/${cart.payment_collection?.id}/payment-sessions`, {
+				method: 'POST',
+				headers: backendHeaders(ctx.headers()),
+				body: JSON.stringify({
+					provider_id,
+					data: {
+						payment_method_nonce: data.payment_method_nonce,
+						context: {
+							customer: {
+								email: cart.email,
+								firstName: cart.billing_address?.first_name || cart.shipping_address?.first_name || '',
+								lastName: cart.billing_address?.last_name || cart.shipping_address?.last_name || '',
+								phone: cart.billing_address?.phone || cart.shipping_address?.phone || ''
+							},
+							shipping: formatBraintreeAddress('shipping', cart),
+							billing: formatBraintreeAddress('billing', cart),
+							deviceData: data.deviceData
 						}
-					})
-				}
-			)
+					}
+				})
+			})
 			return res.json()
 		}
 
-		return ctx.client.store.payment.initiatePaymentSession(
-			cart,
-			{ provider_id },
-			{},
-			ctx.headers()
-		)
+		return ctx.client.store.payment.initiatePaymentSession(cart, { provider_id }, {}, ctx.headers())
 	}
 )

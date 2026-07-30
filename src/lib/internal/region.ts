@@ -7,12 +7,9 @@ let cachedRegionId: string | undefined
  * Pure region-default decision: a configured id wins; otherwise a single-region backend's
  * only region; otherwise undefined (zero or multiple regions with no configured default).
  */
-export function pickDefaultRegionId(
-  configured: string | undefined,
-  regions: { id: string }[]
-): string | undefined {
-  if (configured) return configured
-  return regions.length === 1 ? regions[0].id : undefined
+export function pickDefaultRegionId(configured: string | undefined, regions: { id: string }[]): string | undefined {
+	if (configured) return configured
+	return regions.length === 1 ? regions[0].id : undefined
 }
 
 /**
@@ -26,17 +23,17 @@ export function pickDefaultRegionId(
  * This lets a single-region store work with zero region configuration.
  */
 export async function getDefaultRegionId(): Promise<string | undefined> {
-  const configured = getConfig().defaultRegionId
-  if (configured) return configured
-  if (resolved) return cachedRegionId
-  const { regions } = await getClient().store.region.list()
-  cachedRegionId = pickDefaultRegionId(undefined, regions)
-  resolved = true
-  return cachedRegionId
+	const configured = getConfig().defaultRegionId
+	if (configured) return configured
+	if (resolved) return cachedRegionId
+	const { regions } = await getClient().store.region.list()
+	cachedRegionId = pickDefaultRegionId(undefined, regions)
+	resolved = true
+	return cachedRegionId
 }
 
 /** Test-only: clear the cached single-region lookup. */
 export function __resetRegionCache(): void {
-  resolved = false
-  cachedRegionId = undefined
+	resolved = false
+	cachedRegionId = undefined
 }

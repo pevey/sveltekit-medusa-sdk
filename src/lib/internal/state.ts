@@ -20,18 +20,12 @@ export function setConfig(raw: MedusaHandleConfig): void {
 }
 
 export function getClient(): Medusa {
-	if (!client)
-		throw new Error(
-			'Medusa client is not configured. Add createMedusaHandle(config) to your hooks.server.ts.'
-		)
+	if (!client) throw new Error('Medusa client is not configured. Add createMedusaHandle(config) to your hooks.server.ts.')
 	return client
 }
 
 export function getConfig(): ResolvedConfig {
-	if (!config)
-		throw new Error(
-			'Medusa config is not set. Add createMedusaHandle(config) to your hooks.server.ts.'
-		)
+	if (!config) throw new Error('Medusa config is not set. Add createMedusaHandle(config) to your hooks.server.ts.')
 	return config
 }
 

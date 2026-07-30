@@ -2,14 +2,20 @@ import { describe, it, expect } from 'vitest'
 import { regionForCountry, countriesFromRegions } from './regions'
 
 const REGIONS = [
-	{ id: 'reg_na', countries: [
-		{ iso_2: 'us', display_name: 'United States' },
-		{ iso_2: 'ca', display_name: 'Canada' }
-	] },
-	{ id: 'reg_eu', countries: [
-		{ iso_2: 'gb', display_name: 'United Kingdom' },
-		{ iso_2: 'de', display_name: 'Germany' }
-	] }
+	{
+		id: 'reg_na',
+		countries: [
+			{ iso_2: 'us', display_name: 'United States' },
+			{ iso_2: 'ca', display_name: 'Canada' }
+		]
+	},
+	{
+		id: 'reg_eu',
+		countries: [
+			{ iso_2: 'gb', display_name: 'United Kingdom' },
+			{ iso_2: 'de', display_name: 'Germany' }
+		]
+	}
 ]
 
 describe('regionForCountry', () => {

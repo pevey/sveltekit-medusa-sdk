@@ -97,13 +97,10 @@ export const deleteReview = command(
 )
 
 /** Aggregate rating summary (average, count, per-star distribution) for a product. */
-export const getReviewSummary = query(
-	v.object({ productId: v.pipe(v.string(), v.nonEmpty()) }),
-	async ({ productId }) => {
-		const ctx = requestContext()
-		return ctx.client.store.review.summary(productId, ctx.headers())
-	}
-)
+export const getReviewSummary = query(v.object({ productId: v.pipe(v.string(), v.nonEmpty()) }), async ({ productId }) => {
+	const ctx = requestContext()
+	return ctx.client.store.review.summary(productId, ctx.headers())
+})
 
 /**
  * List reviews created by the signed-in customer across all products.
@@ -142,13 +139,7 @@ export const reviewForm = form(
 	v.object({
 		productId: v.pipe(v.string(), v.nonEmpty()),
 		author_name: v.pipe(v.string(), v.nonEmpty('Please enter your name.')),
-		rating: v.pipe(
-			v.string(),
-			v.transform(Number),
-			v.number(),
-			v.minValue(1, 'Please choose a rating.'),
-			v.maxValue(5)
-		),
+		rating: v.pipe(v.string(), v.transform(Number), v.number(), v.minValue(1, 'Please choose a rating.'), v.maxValue(5)),
 		title: v.optional(v.string()),
 		body: v.pipe(v.string(), v.nonEmpty('Please write your review.'))
 	}),

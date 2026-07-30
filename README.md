@@ -136,13 +136,13 @@ debugging, that _your storefront_ set the cookie. Both names are configurable.
 
 ```svelte
 <script lang="ts">
-  import { getProducts, addToCart } from 'sveltekit-medusa-sdk'
+	import { getProducts, addToCart } from 'sveltekit-medusa-sdk'
 </script>
 
 <ul>
-  {#each await getProducts() as product}
-    <li>{product.title}</li>
-  {/each}
+	{#each await getProducts() as product}
+		<li>{product.title}</li>
+	{/each}
 </ul>
 ```
 
@@ -291,8 +291,8 @@ if (country) await setTraits({ first_country: country }) // your own first-touch
 ```svelte
 <!-- browser -->
 <script lang="ts">
-  import { setTraits } from 'sveltekit-medusa-sdk'
-  // setTraits({ plan_interest: 'pro' })
+	import { setTraits } from 'sveltekit-medusa-sdk'
+	// setTraits({ plan_interest: 'pro' })
 </script>
 ```
 
@@ -301,8 +301,8 @@ if (country) await setTraits({ first_country: country }) // your own first-touch
 ```svelte
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import { Analytics } from 'sveltekit-medusa-sdk'
-  let { children } = $props()
+	import { Analytics } from 'sveltekit-medusa-sdk'
+	let { children } = $props()
 </script>
 
 <Analytics />
@@ -324,11 +324,11 @@ Need your own auth or rate-limiting around it? Call `forwardAnalytics(request)` 
 
 ```svelte
 <script lang="ts">
-  import { track } from 'sveltekit-medusa-sdk'
+	import { track } from 'sveltekit-medusa-sdk'
 
-  function onView(id: string) {
-    track('product_viewed', { properties: { id } })
-  }
+	function onView(id: string) {
+		track('product_viewed', { properties: { id } })
+	}
 </script>
 ```
 
@@ -343,7 +343,7 @@ Attribute orders to affiliates with no cart wiring on the storefront. An affilia
 ```svelte
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import { Affiliate } from 'sveltekit-medusa-sdk'
+	import { Affiliate } from 'sveltekit-medusa-sdk'
 </script>
 
 <Affiliate />
@@ -382,13 +382,13 @@ export const getMyOrders = query(async () => {
 
 ```svelte
 <script lang="ts">
-  import { getMyOrders } from '$lib/orders.remote'
+	import { getMyOrders } from '$lib/orders.remote'
 </script>
 
 <ul>
-  {#each await getMyOrders() as order}
-    <li>#{order.display_id} — {order.total}</li>
-  {/each}
+	{#each await getMyOrders() as order}
+		<li>#{order.display_id} — {order.total}</li>
+	{/each}
 </ul>
 ```
 

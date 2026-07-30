@@ -16,11 +16,7 @@ function cookiesFrom(map: Record<string, string>) {
 
 describe('resolveContext', () => {
 	it('reads region/country from cookies when present', () => {
-		const ctx = resolveContext(
-			fakeClient,
-			config,
-			cookiesFrom({ region: 'reg_eu', country: 'de' })
-		)
+		const ctx = resolveContext(fakeClient, config, cookiesFrom({ region: 'reg_eu', country: 'de' }))
 		expect(ctx.region_id).toBe('reg_eu')
 		expect(ctx.country_code).toBe('de')
 	})
