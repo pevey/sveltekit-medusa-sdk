@@ -140,7 +140,7 @@ debugging, that _your storefront_ set the cookie. Both names are configurable.
 </script>
 
 <ul>
-	{#each await getProducts() as product}
+	{#each (await getProducts()).products as product}
 		<li>{product.title}</li>
 	{/each}
 </ul>
@@ -153,6 +153,7 @@ All functions are exported from the package root. Each `*.remote.ts` module is a
 Two conventions to know:
 
 - **Catalog reads ship two variants** — a **prerender** default (takes explicit `region_id`/`country_code` args) and a `*Query` twin (reads region/country from the request's cookies, can be updated dynamically).
+- **Catalog list reads return an envelope**, not a bare array: `{ products, count, limit, offset }` (and `{ product_categories, … }` / `{ collections, … }`). `count` is the total matching the filters, so you can compute a page count.
 - **Auth functions return a structured `{ ok: boolean, code?: string }`** so you can map stable codes (`invalid_credentials`, `email_exists`, `rate_limited`, `unsupported`, `unknown`) to your own copy/i18n.
 
 ### regions
@@ -161,24 +162,34 @@ Two conventions to know:
 
 ### products
 
-- `getProducts` — prerender
+- `getProducts` — prerender → `{ products, count, limit, offset }`
 - `getProduct` — prerender (by `id` or `slug`)
-- `getProductsQuery` — query
+- `getProductsQuery` — query → `{ products, count, limit, offset }`
 - `getProductQuery` — query (by `id` or `slug`)
+
+The list variants accept `limit`, `offset`, `order`, `q`, `category_id`, `collection_id` and `type_id` (the three id filters take a string or an array of strings) alongside `region_id`, `country_code` and `fields`:
+
+```ts
+const { products, count } = await getProductsQuery({ category_id: 'pcat_01', limit: 12, offset: 24, order: '-created_at' })
+```
 
 ### categories
 
-- `getProductCategories` — prerender
+- `getProductCategories` — prerender → `{ product_categories, count, limit, offset }`
 - `getProductCategory` — prerender (by `id` or `slug`)
-- `getProductCategoriesQuery` — query
+- `getProductCategoriesQuery` — query → `{ product_categories, count, limit, offset }`
 - `getProductCategoryQuery` — query (by `id` or `slug`)
+
+The list variants accept `limit`, `offset`, `order`, `q`, `fields` and `parent_category_id` (list the children of one category).
 
 ### collections
 
-- `getCollections` — prerender
+- `getCollections` — prerender → `{ collections, count, limit, offset }`
 - `getCollection` — prerender (by `id` or `slug`)
-- `getCollectionsQuery` — query
+- `getCollectionsQuery` — query → `{ collections, count, limit, offset }`
 - `getCollectionQuery` — query (by `id` or `slug`)
+
+The list variants accept `limit`, `offset`, `order`, `q` and `fields`.
 
 ### cart
 
@@ -396,4 +407,4 @@ export const getMyOrders = query(async () => {
 
 ## Rendering data server-side (SSR)
 
-With `experimental.async` you can `await` a query directly in markup (`{#each await getProducts() as p}`) so it renders during SSR. An `{#await getCart() then cart}` block, by contrast, defers to the client. Use direct `await` when you want the data in the server-rendered HTML.
+With `experimental.async` you can `await` a query directly in markup (`{#each (await getProducts()).products as p}`) so it renders during SSR. An `{#await getCart() then cart}` block, by contrast, defers to the client. Use direct `await` when you want the data in the server-rendered HTML.

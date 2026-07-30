@@ -2,18 +2,43 @@ import { prerender, query } from '$app/server'
 import * as v from 'valibot'
 import type Medusa from 'medusa-js-sdk'
 import { getClient } from './internal/state'
+import { listParams, type ListArgs } from './internal/list-params'
 import { requestContext } from './server/request'
+import type { StoreCollection } from '@medusajs/types'
 
 const bySlugSchema = v.object({
 	id: v.optional(v.string()),
 	slug: v.optional(v.string())
 })
 
-type BySlug = { id?: string; slug?: string }
+const collectionListSchema = v.object({
+	limit: v.optional(v.number()),
+	offset: v.optional(v.number()),
+	order: v.optional(v.string()),
+	q: v.optional(v.string()),
+	fields: v.optional(v.string())
+})
 
-async function listCollectionsCore(client: Medusa, headers?: Record<string, string>) {
-	const { collections } = await client.store.collection.list({}, headers)
-	return collections
+type BySlug = { id?: string; slug?: string }
+type CollectionListArgs = ListArgs & { fields?: string }
+
+export type CollectionListResult = {
+	collections: StoreCollection[]
+	count: number
+	limit: number
+	offset: number
+}
+
+async function listCollectionsCore(client: Medusa, a: CollectionListArgs, headers?: Record<string, string>): Promise<CollectionListResult> {
+	const params: Record<string, string | string[]> = { ...listParams(a) }
+	if (a.fields) params.fields = a.fields
+	const res = await client.store.collection.list(params as Record<string, string>, headers)
+	return {
+		collections: res.collections,
+		count: res.count,
+		limit: res.limit,
+		offset: res.offset
+	}
 }
 
 async function getCollectionCore(client: Medusa, a: BySlug, headers?: Record<string, string>) {
@@ -26,7 +51,7 @@ async function getCollectionCore(client: Medusa, a: BySlug, headers?: Record<str
 	return collections.length ? collections[0] : null
 }
 
-export const getCollections = prerender(async () => listCollectionsCore(getClient()), {
+export const getCollections = prerender(v.optional(collectionListSchema, {}), async (a: CollectionListArgs) => listCollectionsCore(getClient(), a), {
 	dynamic: true
 })
 
@@ -34,9 +59,9 @@ export const getCollection = prerender(bySlugSchema, async (a: BySlug) => getCol
 	dynamic: true
 })
 
-export const getCollectionsQuery = query(async () => {
+export const getCollectionsQuery = query(v.optional(collectionListSchema, {}), async (a: CollectionListArgs) => {
 	const ctx = requestContext()
-	return listCollectionsCore(ctx.client, ctx.headers())
+	return listCollectionsCore(ctx.client, a, ctx.headers())
 })
 
 export const getCollectionQuery = query(bySlugSchema, async (a: BySlug) => {

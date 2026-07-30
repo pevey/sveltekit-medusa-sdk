@@ -4,7 +4,9 @@ import type Medusa from 'medusa-js-sdk'
 import { getClient, getConfig } from './internal/state'
 import { getDefaultRegionId } from './internal/region'
 import { mergeFields } from './internal/merge-fields'
+import { listParams, type ListArgs } from './internal/list-params'
 import { requestContext } from './server/request'
+import type { StoreProduct } from '@medusajs/types'
 
 // Baseline `fields` the product remotes request so prices come back by default. Consumers
 // extend/override via the `fields` arg (Medusa select syntax) — see mergeFields.
@@ -30,12 +32,6 @@ function productFields(a: RegionArgs): string {
 	return mergeFields([], a.fields)
 }
 
-const regionSchema = v.object({
-	region_id: v.optional(v.string()),
-	country_code: v.optional(v.string()),
-	fields: v.optional(v.string())
-})
-
 const productArgsSchema = v.object({
 	id: v.optional(v.string()),
 	slug: v.optional(v.string()),
@@ -44,8 +40,31 @@ const productArgsSchema = v.object({
 	fields: v.optional(v.string())
 })
 
+const idFilter = v.union([v.string(), v.array(v.string())])
+
+const productListSchema = v.object({
+	region_id: v.optional(v.string()),
+	country_code: v.optional(v.string()),
+	fields: v.optional(v.string()),
+	limit: v.optional(v.number()),
+	offset: v.optional(v.number()),
+	order: v.optional(v.string()),
+	q: v.optional(v.string()),
+	category_id: v.optional(idFilter),
+	collection_id: v.optional(idFilter),
+	type_id: v.optional(idFilter)
+})
+
 type RegionArgs = { region_id?: string; country_code?: string; fields?: string }
 type ProductArgs = RegionArgs & { id?: string; slug?: string }
+type ProductListArgs = RegionArgs & ListArgs
+
+export type ProductListResult = {
+	products: StoreProduct[]
+	count: number
+	limit: number
+	offset: number
+}
 
 /**
  * Resolve region/country for the prerender variants: an explicit arg wins; otherwise
@@ -70,12 +89,18 @@ function regionParams(a: RegionArgs): Record<string, string> {
 	return p
 }
 
-async function listProductsCore(client: Medusa, a: RegionArgs, headers?: Record<string, string>) {
+async function listProductsCore(client: Medusa, a: ProductListArgs, headers?: Record<string, string>): Promise<ProductListResult> {
 	const fields = productFields(a)
-	const params: Record<string, string> = { ...regionParams(a) }
+	// `regionParams` and `listParams` are disjoint, so the spread order is irrelevant.
+	const params: Record<string, string | string[]> = { ...regionParams(a), ...listParams(a) }
 	if (fields) params.fields = fields
-	const { products } = await client.store.product.list(params, headers)
-	return products
+	const res = await client.store.product.list(params as Record<string, string>, headers)
+	return {
+		products: res.products,
+		count: res.count,
+		limit: res.limit,
+		offset: res.offset
+	}
 }
 
 async function getProductCore(client: Medusa, a: ProductArgs, headers?: Record<string, string>) {
@@ -94,17 +119,21 @@ async function getProductCore(client: Medusa, a: ProductArgs, headers?: Record<s
 // Prerender (cacheable, request-independent). Region: explicit arg ?? config default
 // ?? single-region auto-detect. Errors propagate — a consumer that wants a flaky backend
 // to warn instead of failing the build sets `kit.prerender.handleHttpError` in its config.
-export const getProducts = prerender(v.optional(regionSchema, {}), async (a: RegionArgs) => listProductsCore(getClient(), await withDefaultRegion(a)), {
-	dynamic: true
-})
+export const getProducts = prerender(
+	v.optional(productListSchema, {}),
+	async (a: ProductListArgs) => listProductsCore(getClient(), await withDefaultRegion(a)),
+	{
+		dynamic: true
+	}
+)
 
 export const getProduct = prerender(productArgsSchema, async (a: ProductArgs) => getProductCore(getClient(), await withDefaultRegion(a)), { dynamic: true })
 
 // Query twins (fresh, personalized — region from cookie ?? default). Propagate errors.
-export const getProductsQuery = query(v.optional(regionSchema, {}), async (a: RegionArgs) => {
+export const getProductsQuery = query(v.optional(productListSchema, {}), async (a: ProductListArgs) => {
 	const ctx = requestContext()
 	const region_id = a.region_id || ctx.region_id || (await getDefaultRegionId())
-	return listProductsCore(ctx.client, { region_id, country_code: a.country_code || ctx.country_code, fields: a.fields }, ctx.headers())
+	return listProductsCore(ctx.client, { ...a, region_id, country_code: a.country_code || ctx.country_code }, ctx.headers())
 })
 
 export const getProductQuery = query(productArgsSchema, async (a: ProductArgs) => {
