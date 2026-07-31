@@ -87,9 +87,7 @@ export const handle = createMedusaHandle({
 })
 ```
 
-Augment `App.Locals` so the per-request context is typed (the handle assigns
-`event.locals.medusa`, so you can use the configured client in your own load functions and
-endpoints):
+Augment `App.Locals` so the per-request context is typed (the handle assigns `event.locals.medusa`, so you can use the configured client in your own load functions and endpoints):
 
 ```ts
 // src/app.d.ts
@@ -129,8 +127,7 @@ export {}
 
 ### The `sid` cookie rename
 
-On login, this library establishes a Medusa backend session and re-issues it to your storefront under a **neutral cookie name** (default `sid`) instead of Medusa's`connect.sid`. Two reasons: it makes it less obvious your backend is Medusa (a small hurdle against broad vulnerability scanning), and a distinct name tells you at a glance, while
-debugging, that _your storefront_ set the cookie. Both names are configurable.
+On login, this library establishes a Medusa backend session and re-issues it to your storefront under a **neutral cookie name** (default `sid`) instead of Medusa's`connect.sid`. Two reasons: it makes it less obvious your backend is Medusa (a small hurdle against broad vulnerability scanning), and a distinct name tells you at a glance, while debugging, that _your storefront_ set the cookie. Both names are configurable.
 
 ## Usage
 
@@ -214,10 +211,13 @@ The list variants accept `limit`, `offset`, `order`, `q` and `fields`.
 - `listPaymentProviders` — query
 - `initiatePaymentSession` — command (generic, any provider)
 
+> **Initiate the session at place-order, not on mount.** Medusa deletes a cart's payment sessions whenever the cart total changes — `refreshPaymentCollectionForCartWorkflow` runs `deletePaymentSessionsWorkflow`, and the provider's intent is canceled with it. Selecting a shipping method, applying a discount, or changing a quantity is enough. A session created when the checkout page mounts is therefore already dead by the time the shopper pays, and Stripe will reject its `client_secret` with _"This PaymentIntent is in a terminal state"_.
+>
+> Call `initiatePaymentSession` once, after the last cart mutation and immediately before `completeCart`. For Stripe that means mounting `<Elements>` in deferred mode (`{ mode: 'payment', amount, currency }`) and creating the intent inside your confirm step; see the `checkout` component in [sveltekit-medusa-ui](https://pevey.com/sveltekit-medusa-ui) for a worked implementation.
+
 ### checkout
 
-Provider-agnostic — used by the Stripe, Braintree, and auto checkout flows alike.
-Payment-provider differences live at the `authorizePayment` seam, not in the form.
+Provider-agnostic — used by the Stripe, Braintree, and auto checkout flows alike. Payment-provider differences live at the `authorizePayment` seam, not in the form.
 
 - `checkoutForm` — form (applies email + shipping/billing address to the cart)
 - `checkoutSchema` — valibot schema (from `sveltekit-medusa-sdk/schemas`)
@@ -225,6 +225,8 @@ Payment-provider differences live at the `authorizePayment` seam, not in the for
 ### braintree
 
 - `initiateBraintreePaymentSession` — command
+
+Returns `null` when Medusa responds with a non-2xx, so a failed session cannot be mistaken for a successful one. Check the result before calling `completeCart`; the underlying error is logged server-side.
 
 ### orders
 

@@ -43,7 +43,29 @@ export const initiateBraintreePaymentSession = command(
 		if (!cart) return null
 
 		if (data?.payment_method_nonce) {
-			const res = await fetch(`${cfg.baseUrl}/store/payment-collections/${cart.payment_collection?.id}/payment-sessions`, {
+			let collectionId = cart.payment_collection?.id
+			if (!collectionId) {
+				const created = await fetch(`${cfg.baseUrl}/store/payment-collections`, {
+					method: 'POST',
+					headers: backendHeaders(ctx.headers()),
+					body: JSON.stringify({ cart_id: cartId })
+				})
+				if (!created.ok) {
+					const body = await created.text().catch(() => '')
+					console.error(
+						`[initiateBraintreePaymentSession] could not create a payment collection: ${created.status} ${created.statusText}`,
+						body.slice(0, 500)
+					)
+					return null
+				}
+				collectionId = (await created.json())?.payment_collection?.id
+				if (!collectionId) {
+					console.error('[initiateBraintreePaymentSession] payment-collection response had no id')
+					return null
+				}
+			}
+
+			const res = await fetch(`${cfg.baseUrl}/store/payment-collections/${collectionId}/payment-sessions`, {
 				method: 'POST',
 				headers: backendHeaders(ctx.headers()),
 				body: JSON.stringify({
@@ -64,6 +86,17 @@ export const initiateBraintreePaymentSession = command(
 					}
 				})
 			})
+
+			// A Medusa 4xx/5xx returns a JSON error body, which is TRUTHY. Returning it unchecked
+			// made a failed session look like a successful one to the caller, so place-order carried
+			// on to completeCart and surfaced the misleading "Payment sessions are required to
+			// complete cart" instead of the real cause. Fail closed, and log what actually happened.
+			if (!res.ok) {
+				const body = await res.text().catch(() => '')
+				console.error(`[initiateBraintreePaymentSession] ${res.status} ${res.statusText} from Medusa:`, body.slice(0, 500))
+				return null
+			}
+
 			return res.json()
 		}
 
