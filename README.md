@@ -214,11 +214,17 @@ The list variants accept `limit`, `offset`, `order`, `q` and `fields`.
 - `listPaymentProviders` — query
 - `initiatePaymentSession` — command (generic, any provider)
 
+### checkout
+
+Provider-agnostic — used by the Stripe, Braintree, and auto checkout flows alike.
+Payment-provider differences live at the `authorizePayment` seam, not in the form.
+
+- `checkoutForm` — form (applies email + shipping/billing address to the cart)
+- `checkoutSchema` — valibot schema (from `sveltekit-medusa-sdk/schemas`)
+
 ### braintree
 
-- `braintreeCheckoutForm` — form
 - `initiateBraintreePaymentSession` — command
-- `braintreeCheckoutSchema` — valibot schema (from `sveltekit-medusa-sdk/schemas`)
 
 ### orders
 

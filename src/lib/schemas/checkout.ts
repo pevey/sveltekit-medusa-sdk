@@ -1,11 +1,16 @@
 import * as v from 'valibot'
 
 /**
- * Checkout schema for the Braintree flow. Exported from a non-`.remote.` module
- * because remote files cannot export schemas. Consumers can reuse or extend it
- * when building their own checkout form. A `stripeCheckoutSchema` will follow.
+ * Provider-agnostic checkout schema (email + shipping/billing address).
+ * Exported from a non-`.remote.` module because remote files cannot export
+ * schemas. Consumers can reuse or extend it when building their own checkout
+ * form.
+ *
+ * Payment-provider specifics never reach this schema — they live at the
+ * `authorizePayment` seam (see `initiateBraintreePaymentSession` for the nonce
+ * flow, `initiatePaymentSession` for the client-secret flow).
  */
-export const braintreeCheckoutSchema = v.object({
+export const checkoutSchema = v.object({
 	email: v.pipe(v.string(), v.nonEmpty('Email is required'), v.email('Invalid email address')),
 	first_name: v.pipe(v.string(), v.nonEmpty('First name is required')),
 	last_name: v.pipe(v.string(), v.nonEmpty('Last name is required')),

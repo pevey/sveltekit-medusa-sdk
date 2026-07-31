@@ -21,7 +21,7 @@
 // the browser. Only non-remote, barrel-reachable modules must avoid lib/server.
 // ─────────────────────────────────────────────────────────────────────────────
 export type { MedusaHandleConfig, MedusaContext, CookieNames, AuthResult, Country } from './types'
-export { braintreeCheckoutSchema } from './schemas/braintree'
+export { checkoutSchema } from './schemas/checkout'
 
 // Reusable client-safe helpers (see lib/helpers)
 export { formatBraintreeAddress } from './helpers/braintree'
@@ -54,7 +54,8 @@ export { addPromotion, removePromotion } from './promotions.remote'
 
 // Payment
 export { listPaymentProviders, initiatePaymentSession } from './payment.remote'
-export { braintreeCheckoutForm, initiateBraintreePaymentSession } from './braintree.remote'
+export { checkoutForm } from './checkout.remote'
+export { initiateBraintreePaymentSession } from './braintree.remote'
 
 // Orders
 export { getOrders, getOrderById } from './orders.remote'

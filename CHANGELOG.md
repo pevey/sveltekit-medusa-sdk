@@ -1,3 +1,7 @@
+## 2.?
+
+- Renamed braintreeCheckoutForm and braintreeCheckoutSchema to checkoutForm and checkoutSchema, respectively, since these are generic since several versions back and used for all payment providers.
+
 ## 2.18.0
 
 - BREAKING: getCategories and getCollections now take additional options in the schema (limit, offset, order) and return { products, count, limit, offset } instead of a bare array.

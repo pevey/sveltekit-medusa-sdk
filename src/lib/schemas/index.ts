@@ -1,1 +1,1 @@
-export { braintreeCheckoutSchema } from './braintree'
+export { checkoutSchema } from './checkout'
